@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>LED Screen Planner — JCEE</title>
+  <style>
+    :root { --bd:#ddd; --bd2:#eee; --fg:#111; --mut:#555; --bg:#fff; --card:#fff; }
+    body { font-family: Arial, sans-serif; margin: 16px; color:var(--fg); background:var(--bg); }
+    h2 { margin: 0 0 12px; }
+    h3 { margin: 0 0 10px; }
+    .grid { display: grid; gap: 12px; grid-template-columns: repeat(12, 1fr); }
+    .card { border: 1px solid var(--bd); border-radius: 12px; padding: 12px; background:var(--card); }
+    .col-4 { grid-column: span 4; }
+    .col-6 { grid-column: span 6; }
+    .col-8 { grid-column: span 8; }
+    .col-12 { grid-column: span 12; }
+    label { display:block; font-size: 12px; color:var(--mut); margin: 10px 0 4px; }
+    input, select, textarea { width:100%; padding:8px; box-sizing:border-box; border:1px solid var(--bd); border-radius:10px; }
+    textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    button { padding:10px 12px; border-radius: 12px; border: 1px solid var(--bd); background:#f7f7f7; cursor:pointer; }
+    button:hover { background:#f0f0f0; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .pill { display:inline-block; padding:4px 8px; border:1px solid var(--bd2); border-radius:999px; font-size:12px; color:var(--mut); }
+    .muted { color:var(--mut); font-size:12px; }
+    .metrics { display:grid; gap:10px; grid-template-columns: repeat(4, 1fr); }
+    .metric { border:1px solid var(--bd2); border-radius:12px; padding:10px; }
+    .metric .k { font-size:12px; color:var(--mut); }
+    .metric .v { font-size:18px; font-weight:700; margin-top:4px; }
+    .tbl { width:100%; border-collapse: collapse; }
+    .tbl th, .tbl td { border-bottom:1px solid var(--bd2); padding:8px; font-size: 13px; text-align:left; vertical-align:top; }
+    .tbl th { color:var(--mut); font-weight:600; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; }
+    .warn { color:#a35b00; font-size:12px; }
+    .err { color:#b00020; font-size:12px; }
+    .ok { color:#1a7f37; font-size:12px; }
+    .hr { height:1px; background:var(--bd2); margin:10px 0; }
+    @media (max-width: 1000px) {
+      .col-4,.col-6,.col-8 { grid-column: span 12; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <h2>LED Screen Planner — ELX 3.9mm</h2>
+  <div class="row" style="margin-bottom:12px;">
+    <span class="pill">Panels • Port planning • Cut-out • Power • BOM CSV</span>
+    <span class="pill" id="buildInfo"></span>
+  </div>
+
+  <div class="grid">
+    <!-- Inputs -->
+    <div class="card col-4">
+      <h3>Inputs</h3>
+
+      <label>Panel type</label>
+      <select id="panelType"></select>
+      <div class="muted" id="panelHint"></div>
+
+      <div class="row">
+        <div style="flex:1 1 140px;">
+          <label>Screen width (m)</label>
+          <input id="screenW" type="number" step="0.1" value="10" />
+        </div>
+        <div style="flex:1 1 140px;">
+          <label>Screen height (m)</label>
+          <input id="screenH" type="number" step="0.1" value="4" />
+        </div>
+      </div>
+
+      <label>Rounding</label>
+      <select id="rounding">
+        <option value="UP">Round UP to full panels (quote/prep safe)</option>
+        <option value="DOWN">Round DOWN (trim screen)</option>
+      </select>
+
+      <div class="hr"></div>
+
+      <div class="row" style="justify-content:space-between;">
+        <strong style="font-size:13px;">Cut-out (hole)</strong>
+        <label style="margin:0; display:flex; gap:8px; align-items:center; font-size:12px; color:var(--mut);">
+          <input id="cutoutEnable" type="checkbox" style="width:auto; margin:0;" />
+          Enable
+        </label>
+      </div>
+      <div class="muted">Assumes cut-out is centred horizontally. Vertical position is from bottom edge.</div>
+
+      <div class="row">
+        <div style="flex:1 1 120px;">
+          <label>Cut-out width (m)</label>
+          <input id="cutoutW" type="number" step="0.1" value="2.0" disabled />
+        </div>
+        <div style="flex:1 1 120px;">
+          <label>Cut-out height (m)</label>
+          <input id="cutoutH" type="number" step="0.1" value="1.0" disabled />
+        </div>
+      </div>
+      <div class="row">
+        <div style="flex:1 1 120px;">
+          <label>Cut-out bottom offset (m)</label>
+          <input id="cutoutBottom" type="number" step="0.1" value="0.0" disabled />
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <label>NovaStar processor preference</label>
+      <select id="procMode">
+        <option value="AUTO">Auto (smallest that fits)</option>
+        <option value="VX600">Force VX600</option>
+        <option value="VX1000">Force VX1000</option>
+      </select>
+
+      <label>Max pixels per port (override)</label>
+      <input id="maxPxPerPort" type="number" step="1000" value="650000" />
+
+      <label>Max panels per DATA chain</label>
+      <input id="maxPanelsData" type="number" step="1" value="10" />
+
+      <label>Max panels per POWER chain</label>
+      <input id="maxPanelsPower" type="number" step="1" value="6" />
+
+      <div class="hr"></div>
+
+      <label>Distro template</label>
+      <select id="distro">
+        <option value="SP10">Single-phase 10A circuits @ 230V</option>
+        <option value="SP15">Single-phase 15A circuits @ 230V</option>
+        <option value="PD620">PD620 style: 3-phase 32A in @ 400V (est.)</option>
+      </select>
+
+      <div class="row">
+        <div style="flex:1 1 120px;">
+          <label>Voltage (V)</label>
+          <input id="voltage" type="number" step="1" value="230" />
+        </div>
+        <div style="flex:1 1 120px;">
+          <label>Circuit rating (A)</label>
+          <input id="circuitA" type="number" step="1" value="10" />
+        </div>
+      </div>
+      <div class="muted">Power circuiting uses 80% continuous-load rule by default.</div>
+
+      <div class="row" style="margin-top:12px;">
+        <button id="recalcBtn" type="button">Recalculate</button>
+        <button id="downloadJsonBtn" type="button">Download JSON</button>
+        <button id="downloadBomBtn" type="button">Download BOM CSV</button>
+      </div>
+
+      <div class="warn" style="margin-top:10px;">
+        Structural suggestions are conceptual only. Confirm with rated system + ballast + wind calculations.
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="card col-8">
+      <h3>Summary</h3>
+
+      <div class="metrics">
+        <div class="metric"><div class="k">Panels (W × H)</div><div class="v" id="mPanels">—</div></div>
+        <div class="metric"><div class="k">Built size (m)</div><div class="v" id="mSize">—</div></div>
+        <div class="metric"><div class="k">Canvas (px)</div><div class="v" id="mPixels">—</div></div>
+        <div class="metric"><div class="k">LED weight</div><div class="v" id="mWeight">—</div></div>
+      </div>
+
+      <div class="grid" style="margin-top:12px;">
+        <div class="card col-6">
+          <strong>Processor recommendation</strong>
+          <div class="muted" id="procRec">—</div>
+          <div class="hr"></div>
+          <strong>Structure concept</strong>
+          <div class="muted" id="structureConcept">—</div>
+        </div>
+
+        <div class="card col-6">
+          <strong>Power</strong>
+          <pre id="powerOut" class="mono">—</pre>
+        </div>
+
+        <div class="card col-12">
+          <strong>Port planning (pixels/port + panel chains)</strong>
+          <div class="muted" id="portNote"></div>
+          <table class="tbl" id="portsTable"></table>
+        </div>
+
+        <div class="card col-12">
+          <strong>Per-row power (based on rows of panels)</strong>
+          <table class="tbl" id="rowTable"></table>
+        </div>
+
+        <div class="card col-12">
+          <strong>Cables summary</strong>
+          <pre id="cablesOut" class="mono">—</pre>
+        </div>
+
+        <div class="card col-12">
+          <strong>Raw output (JSON)</strong>
+          <pre id="jsonOut" class="mono">—</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
